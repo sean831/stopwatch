@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7.77 챌린지 - TV용</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --toss-blue: #0064ff;
+            --toss-grey-bg: #f2f4f6;
+            --toss-text-black: #191f28;
+            --toss-text-grey: #8b95a1;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: white; /* TV에서는 배경이 밝은 것이 가독성이 좋습니다 */
+            font-family: 'Pretendard', sans-serif;
+            color: var(--toss-text-black);
+            overflow: hidden;
+        }
+
+        .main-wrapper {
+            text-align: center;
+            width: 90vw;
+        }
+
+        /* 챌린지 제목 */
+        h1 {
+            font-size: 4vw; /* 화면 너비에 비례 */
+            color: var(--toss-text-grey);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        /* 메인 타이머 - 화면에서 가장 크게 보임 */
+        #timer {
+            font-size: 25vw; /* 화면을 가득 채우는 크기 */
+            font-weight: 850;
+            margin: 0;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -1vw;
+        }
+
+        /* 하단 안내 메시지 */
+        .instruction {
+            font-size: 2.5vw;
+            color: white;
+            background: var(--toss-blue);
+            padding: 1.5vw 4vw;
+            border-radius: 100px;
+            display: inline-block;
+            margin-top: 3vw;
+        }
+
+        /* 성공 시 축하 메시지 */
+        #message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            font-size: 8vw;
+            font-weight: 900;
+            color: var(--toss-blue);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2vw 6vw;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+
+        #message.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* 포인트 컬러 */
+        .blue { color: var(--toss-blue); }
+    </style>
+</head>
+<body>
+
+    <div id="message">✨ <span class="blue">7.77</span> 성공! ✨</div>
+
+    <div class="main-wrapper">
+        <h1 id="title">7.77초를 맞춰보세요</h1>
+        <div id="timer">0.00</div>
+        <div class="instruction" id="statusBox">
+            <span id="statusText">Enter를 눌러 시작</span>
+        </div>
+    </div>
+
+    <script>
+        let startTime;
+        let elapsedTime = 0;
+        let timerInterval;
+        let state = 'READY'; 
+
+        const timerDisplay = document.getElementById('timer');
+        const statusText = document.getElementById('statusText');
+        const statusBox = document.getElementById('statusBox');
+        const message = document.getElementById('message');
+
+        function updateDisplay() {
+            const now = Date.now();
+            elapsedTime = (now - startTime) / 1000;
+            timerDisplay.textContent = elapsedTime.toFixed(2);
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateDisplay, 10);
+            state = 'RUNNING';
+            statusText.textContent = 'Enter를 눌러 정지';
+            statusBox.style.backgroundColor = '#ff4545'; // 정지 시 빨간색 계열로 변경
+            message.classList.remove('show');
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            state = 'STOPPED';
+            statusText.textContent = 'Enter를 눌러 다시 시작';
+            statusBox.style.backgroundColor = '#191f28';
+            
+            if (elapsedTime.toFixed(2) === "7.77") {
+                triggerSuccess();
+            }
+        }
+
+        function resetTimer() {
+            elapsedTime = 0;
+            timerDisplay.textContent = "0.00";
+            state = 'READY';
+            statusText.textContent = 'Enter를 눌러 시작';
+            statusBox.style.backgroundColor = '#0064ff';
+            message.classList.remove('show');
+        }
+
+        function triggerSuccess() {
+            message.classList.add('show');
+            // TV용 거대한 폭죽 효과
+            const count = 200;
+            const defaults = { origin: { y: 0.7 } };
+
+            function fire(particleRatio, opts) {
+                confetti(Object.assign({}, defaults, opts, {
+                    particleCount: Math.floor(count * particleRatio)
+                }));
+            }
+
+            fire(0.25, { spread: 26, startVelocity: 55 });
+            fire(0.2, { spread: 60 });
+            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+            fire(0.1, { spread: 120, startVelocity: 45 });
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (state === 'READY') startTimer();
+                else if (state === 'RUNNING') stopTimer();
+                else if (state === 'STOPPED') resetTimer();
+            }
+        });
+    </script>
+</body>
+</html>
