@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>7.77 챌린지 - TV용</title>
+    <title>7.77 챌린지 - TV 최종판</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --toss-blue: #0064ff;
-            --toss-grey-bg: #f2f4f6;
+            --toss-red: #f04452;
             --toss-text-black: #191f28;
             --toss-text-grey: #8b95a1;
+            --gold: #ffbb00;
         }
 
         body {
@@ -21,84 +22,105 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: white; /* TV에서는 배경이 밝은 것이 가독성이 좋습니다 */
+            background-color: white;
             font-family: 'Pretendard', sans-serif;
             color: var(--toss-text-black);
             overflow: hidden;
         }
 
+        /* 메인 컨테이너: 위치를 고정시켜서 메시지가 떠도 밀리지 않게 함 */
         .main-wrapper {
+            position: relative;
             text-align: center;
-            width: 90vw;
+            width: 100vw;
+            z-index: 1;
         }
 
-        /* 챌린지 제목 */
         h1 {
-            font-size: 4vw; /* 화면 너비에 비례 */
+            font-size: 3.5vw;
             color: var(--toss-text-grey);
             margin: 0;
             font-weight: 700;
         }
 
-        /* 메인 타이머 - 화면에서 가장 크게 보임 */
         #timer {
-            font-size: 25vw; /* 화면을 가득 채우는 크기 */
+            font-size: 32vw;
             font-weight: 850;
-            margin: 0;
+            margin: -2vw 0;
             line-height: 1;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -1vw;
+            letter-spacing: -1.5vw;
+            transition: color 0.2s ease;
         }
 
-        /* 하단 안내 메시지 */
         .instruction {
             font-size: 2.5vw;
             color: white;
             background: var(--toss-blue);
-            padding: 1.5vw 4vw;
+            padding: 1.2vw 4vw;
             border-radius: 100px;
             display: inline-block;
-            margin-top: 3vw;
+            margin-top: 1vw;
+            min-width: 30vw;
         }
 
-        /* 성공 시 축하 메시지 */
-        #message {
+        /* 결과 메시지: position: fixed로 설정하여 기존 레이아웃을 절대 밀지 않음 */
+        #result-overlay {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.5);
-            font-size: 8vw;
-            font-weight: 900;
-            color: var(--toss-blue);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2vw 6vw;
-            border-radius: 40px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
         }
 
-        #message.show {
+        #result-overlay.show {
             opacity: 1;
             visibility: visible;
-            transform: translate(-50%, -50%) scale(1);
         }
 
-        /* 포인트 컬러 */
-        .blue { color: var(--toss-blue); }
+        .prize-tag {
+            font-size: 5vw;
+            font-weight: 800;
+            margin-bottom: 1vw;
+        }
+
+        .prize-msg {
+            font-size: 10vw;
+            font-weight: 900;
+            color: var(--toss-blue);
+            text-shadow: 0 10px 30px rgba(0, 100, 255, 0.2);
+        }
+
+        .prize-info {
+            font-size: 3vw;
+            color: var(--toss-text-grey);
+            margin-top: 2vw;
+        }
     </style>
 </head>
 <body>
 
-    <div id="message">✨ <span class="blue">7.77</span> 성공! ✨</div>
+    <div id="result-overlay">
+        <div class="prize-tag" id="prizeTag">등급</div>
+        <div class="prize-msg" id="prizeMsg">축하합니다!</div>
+        <div class="prize-info">버튼을 눌러 초기화</div>
+    </div>
 
     <div class="main-wrapper">
-        <h1 id="title">7.77초를 맞춰보세요</h1>
+        <h1 id="title">7.77초 챌린지</h1>
         <div id="timer">0.00</div>
         <div class="instruction" id="statusBox">
-            <span id="statusText">Enter를 눌러 시작</span>
+            <span id="statusText">버튼을 눌러 시작</span>
         </div>
     </div>
 
@@ -111,7 +133,9 @@
         const timerDisplay = document.getElementById('timer');
         const statusText = document.getElementById('statusText');
         const statusBox = document.getElementById('statusBox');
-        const message = document.getElementById('message');
+        const overlay = document.getElementById('result-overlay');
+        const prizeTag = document.getElementById('prizeTag');
+        const prizeMsg = document.getElementById('prizeMsg');
 
         function updateDisplay() {
             const now = Date.now();
@@ -123,48 +147,67 @@
             startTime = Date.now();
             timerInterval = setInterval(updateDisplay, 10);
             state = 'RUNNING';
-            statusText.textContent = 'Enter를 눌러 정지';
-            statusBox.style.backgroundColor = '#ff4545'; // 정지 시 빨간색 계열로 변경
-            message.classList.remove('show');
+            statusText.textContent = '버튼을 눌러 정지';
+            statusBox.style.backgroundColor = varColor('--toss-red');
+            overlay.classList.remove('show');
+            timerDisplay.style.color = 'var(--toss-text-black)';
         }
 
         function stopTimer() {
             clearInterval(timerInterval);
             state = 'STOPPED';
-            statusText.textContent = 'Enter를 눌러 다시 시작';
-            statusBox.style.backgroundColor = '#191f28';
+            statusText.textContent = '버튼을 눌러 초기화';
+            statusBox.style.backgroundColor = varColor('--toss-text-black');
             
-            if (elapsedTime.toFixed(2) === "7.77") {
-                triggerSuccess();
-            }
+            checkResult();
         }
 
         function resetTimer() {
             elapsedTime = 0;
             timerDisplay.textContent = "0.00";
             state = 'READY';
-            statusText.textContent = 'Enter를 눌러 시작';
-            statusBox.style.backgroundColor = '#0064ff';
-            message.classList.remove('show');
+            statusText.textContent = '버튼을 눌러 시작';
+            statusBox.style.backgroundColor = varColor('--toss-blue');
+            overlay.classList.remove('show');
+            timerDisplay.style.color = 'var(--toss-text-black)';
         }
 
-        function triggerSuccess() {
-            message.classList.add('show');
-            // TV용 거대한 폭죽 효과
-            const count = 200;
-            const defaults = { origin: { y: 0.7 } };
-
-            function fire(particleRatio, opts) {
-                confetti(Object.assign({}, defaults, opts, {
-                    particleCount: Math.floor(count * particleRatio)
-                }));
+        function checkResult() {
+            const result = parseFloat(elapsedTime.toFixed(2));
+            const diff = Math.abs(result - 7.77);
+            
+            // 등수 판정 로직
+            if (result === 7.77) {
+                showPrize("✨ 1등 상품 ✨", "7.77 퍼펙트!", "var(--gold)", 200);
+            } else if (diff <= 0.02) {
+                showPrize("🥈 2등 상품 🥈", "아깝다! 거의 완벽해요", "var(--toss-blue)", 100);
+            } else if (diff <= 0.05) {
+                showPrize("🥉 3등 상품 🥉", "대단해요! 성공입니다", "#505967", 50);
             }
+        }
 
-            fire(0.25, { spread: 26, startVelocity: 55 });
-            fire(0.2, { spread: 60 });
-            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-            fire(0.1, { spread: 120, startVelocity: 45 });
+        function showPrize(tag, msg, color, confettiCount) {
+            prizeTag.textContent = tag;
+            prizeTag.style.color = color;
+            prizeMsg.textContent = msg;
+            overlay.classList.add('show');
+            triggerConfetti(confettiCount);
+        }
+
+        function triggerConfetti(count) {
+            const defaults = { origin: { y: 0.7 }, zIndex: 200 };
+            confetti({ ...defaults, particleCount: count, spread: 70, startVelocity: 60 });
+            
+            // 더 화려하게 3번 나눠서 터뜨림
+            setTimeout(() => {
+                confetti({ ...defaults, particleCount: count/2, spread: 100, origin: {x: 0.2, y: 0.8} });
+                confetti({ ...defaults, particleCount: count/2, spread: 100, origin: {x: 0.8, y: 0.8} });
+            }, 200);
+        }
+
+        // CSS 변수 값을 가져오는 헬퍼 함수
+        function varColor(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         }
 
         window.addEventListener('keydown', (e) => {
